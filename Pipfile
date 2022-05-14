@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 ogb = "*"
 torch = "*"
+networkx = "*"
+matplotlib = "*"
 
 [dev-packages]
 

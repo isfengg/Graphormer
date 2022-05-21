@@ -15,14 +15,14 @@ class GraphNodeFeatures(torch.nn.Module):
         self.node_encoder = torch.nn.Embedding(nodes, embedding_dim)
         self.degree_encoder = torch.nn.Embedding(degree, embedding_dim)
         self.graph_token = torch.nn.Embedding(1, embedding_dim)
-        self.apply(lambda module: init_params(module, layers=layers))
+        self.apply(lambda module: init_params(module, layers=layers)) # Refactor this shit
     
     def forward(self, batched_data):
         x, degree = (
             batched_data['x'],
             batched_data['degree']
         )
-        
+
         n_graph, n_node = x.size()[:2]
         node_feature = self.node_encoder(x).sum(dim=-2)
         node_feature = (

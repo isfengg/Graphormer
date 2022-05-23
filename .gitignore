@@ -1,3 +1,6 @@
 .DS_Store
 dataset/
 test/
+data/build
+data/algos.c
+data/algos.cpython-39-darwin.so

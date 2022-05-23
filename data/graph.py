@@ -1,8 +1,12 @@
 from ogb.graphproppred import PygGraphPropPredDataset
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 import torch.distributed as dist
 import torch
-
+import numpy as np
+import IPython
+import pyximport
+pyximport.install(setup_args={"include_dirs": np.get_include()})
+from algos import floyd_warshall
 class Dataset(PygGraphPropPredDataset):
     def __init__(self):
         super().__init__("ogbg-molhiv")
@@ -19,8 +23,11 @@ def preprocess_item(item):
     adj = torch.zeros([N, N], dtype=torch.bool)
     adj[edge_index[0, :], edge_index[1, :]] = True
 
+    shortest_path_result, _ = floyd_warshall(adj.numpy()) # O(n^3) time complexity for undirected unweighted graph? Easy solution right here.
+    
     # edge feature here
     item.degree = adj.long().sum(dim=1).view(-1)
+    item.spatial_pos = torch.from_numpy((shortest_path_result)).long()
 
     return item
 
@@ -29,3 +36,4 @@ split_idx = dataset.get_idx_split()
 train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
 valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
 test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
+IPython.embed()

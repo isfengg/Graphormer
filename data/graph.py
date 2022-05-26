@@ -1,12 +1,12 @@
 from ogb.graphproppred import PygGraphPropPredDataset
 from torch_geometric.loader import DataLoader
-import torch.distributed as dist
 import torch
 import numpy as np
 import IPython
 import pyximport
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from algos import floyd_warshall
+
 class Dataset(PygGraphPropPredDataset):
     def __init__(self):
         super().__init__("ogbg-molhiv")
@@ -28,7 +28,8 @@ def preprocess_item(item):
     # edge feature here
     item.degree = adj.long().sum(dim=1).view(-1)
     item.spatial_pos = torch.from_numpy((shortest_path_result)).long()
-
+    item.attn_bias = torch.zeros([N + 1, N + 1], dtype=torch.float) # bias parameter for each SPD value with graph token
+    
     return item
 
 dataset = Dataset()

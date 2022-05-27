@@ -1,6 +1,7 @@
 .DS_Store
 dataset/
-test/
+test/dataset
+test/playground.ipynb
 data/build
 data/algos.c
 data/algos.cpython-39-darwin.so

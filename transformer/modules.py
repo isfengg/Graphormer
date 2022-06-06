@@ -35,9 +35,11 @@ class GraphNodeFeatures(torch.nn.Module):
         return graph_node_feature
 
 class GraphAttnBias(torch.nn.Module):
-    def __init__(self, num_spatial, heads, layers):
+    def __init__(self, num_spatial, num_heads, layers):
         super().__init__()
-        self.spatial_pos_encoder = torch.nn.Embedding(num_spatial, heads, padding_idx=0)
+        self.num_heads = num_heads
+        self.spatial_pos_encoder = torch.nn.Embedding(num_spatial, num_heads, padding_idx=0)
+        self.graph_token_virtual_distance = torch.nn.Embedding(1, num_heads)
         self.apply(lambda module: init_params(module, layers=layers))
     
     def forward(self, batched_data):
@@ -49,7 +51,7 @@ class GraphAttnBias(torch.nn.Module):
 
         n_graph, n_node = x.size()[:2]
         graph_attn_bias = attn_bias.clone()
-        graph_attn_bias = graph_attn_bias.unsqueeze(1).repeat( # Same thing as torch.zeros(1, 640, 1, 20) for dataset[0] example (19 nodes)
+        graph_attn_bias = graph_attn_bias.unsqueeze(1).repeat(
             1, self.num_heads, 1, 1
         )  # [n_graph, n_head, n_node+1, n_node+1]
 

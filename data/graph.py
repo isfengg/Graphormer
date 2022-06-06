@@ -1,19 +1,13 @@
 from ogb.graphproppred import PygGraphPropPredDataset
-from torch_geometric.loader import DataLoader
 import torch
 import numpy as np
-import IPython
+from torch_geometric.loader import DataLoader
+from functools import lru_cache
 import pyximport
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from algos import floyd_warshall
+import copy
 
-class Dataset(PygGraphPropPredDataset):
-    def __init__(self):
-        super().__init__("ogbg-molhiv")
-
-    def find(self, idx):
-        item = self[idx]
-        return preprocess_item(item)
 
 def preprocess_item(item):
     edge_attr, edge_index, x = item.edge_attr, item.edge_index, item.x
@@ -23,18 +17,37 @@ def preprocess_item(item):
     adj = torch.zeros([N, N], dtype=torch.bool)
     adj[edge_index[0, :], edge_index[1, :]] = True
 
-    shortest_path_result, _ = floyd_warshall(adj.numpy()) # O(n^3) time complexity for undirected unweighted graph? Easy solution right here.
-    
     # edge feature here
+    # if len(edge_attr.size()) == 1:
+    #     edge_attr = edge_attr[:, None]
+    # attn_edge_type = torch.zeros([N, N, edge_attr.size(-1)], dtype=torch.long)
+    # attn_edge_type[edge_index[0, :], edge_index[1, :]] = (
+    #     convert_to_single_emb(edge_attr) + 1
+    # )
+
+    shortest_path_result, path = floyd_warshall(adj.numpy())
+    # max_dist = np.amax(shortest_path_result)
+    # edge_input = algos.gen_edge_input(max_dist, path, attn_edge_type.numpy())
+    spatial_pos = torch.from_numpy((shortest_path_result)).long()
+    attn_bias = torch.zeros([(N + 1) * (N + 1), 1], dtype=torch.float)  # with graph token
+
+    # combine
+    item.x = x
+    item.attn_bias = attn_bias
+    # item.attn_edge_type = attn_edge_type
+    item.spatial_pos = spatial_pos.view(N**2)
     item.degree = adj.long().sum(dim=1).view(-1)
-    item.spatial_pos = torch.from_numpy((shortest_path_result)).long()
-    item.attn_bias = torch.zeros([N + 1, N + 1], dtype=torch.float) # bias parameter for each SPD value with graph token
-    
+    # item.edge_input = torch.from_numpy(edge_input).long()
+
     return item
 
-dataset = Dataset()
-split_idx = dataset.get_idx_split() 
-train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
-valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
-test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
-IPython.embed()
+
+
+class MyPygGraphPropPredDataset(PygGraphPropPredDataset):
+
+    @lru_cache(maxsize=16)
+    def __getitem__(self, idx):
+        item = self.get(self.indices()[idx])
+        item.idx = idx
+        item.y = item.y.reshape(-1)
+        return preprocess_item(item)

@@ -24,6 +24,7 @@ def floyd_warshall(adjacency_matrix):
     cdef long* M_k_ptr
 
     # set unreachable nodes distance to 510
+    # Aren't all the nodes in each graph connected? It's one cohesive molecule, after all.
     for i in range(n):
         for j in range(n):
             if i == j:

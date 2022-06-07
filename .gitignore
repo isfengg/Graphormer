@@ -6,3 +6,4 @@ data/build
 data/algos.c
 data/algos.cpython-39-darwin.so
 .vscode
+data/__pycache__

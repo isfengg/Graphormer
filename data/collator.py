@@ -69,11 +69,10 @@ def collator(items, max_node=128, multi_hop_max_dist=20, spatial_pos_max=1024):
         (
             item.idx,
             item.attn_bias,
-            # item.attn_edge_type,
             item.spatial_pos,
             item.degree,
             item.x,
-            # item.edge_input[:, :, :multi_hop_max_dist, :],
+            item.edge_input[:, :, :multi_hop_max_dist, :],
             item.y,
         )
         for item in items
@@ -81,29 +80,26 @@ def collator(items, max_node=128, multi_hop_max_dist=20, spatial_pos_max=1024):
     (
         idxs,
         attn_biases,
-        # attn_edge_types,
         spatial_poses,
         degrees,
         xs,
-        # edge_inputs,
+        edge_inputs,
         ys,
     ) = zip(*items)
 
     for idx, _ in enumerate(attn_biases):
         attn_biases[idx][1:, 1:][spatial_poses[idx] >= spatial_pos_max] = float("-inf")
     max_node_num = max(i.size(0) for i in xs)
-    # max_dist = max(i.size(-2) for i in edge_inputs)
+    max_dist = max(i.size(-2) for i in edge_inputs)
     y = torch.cat(ys)
     x = torch.cat([pad_2d_unsqueeze(i, max_node_num) for i in xs])
-    # edge_input = torch.cat(
-    #     [pad_3d_unsqueeze(i, max_node_num, max_node_num, max_dist) for i in edge_inputs]
-    # )
+    edge_input = torch.cat(
+        [pad_3d_unsqueeze(i, max_node_num, max_node_num, max_dist) for i in edge_inputs]
+    )
     attn_bias = torch.cat(
         [pad_attn_bias_unsqueeze(i, max_node_num + 1) for i in attn_biases]
     )
-    # attn_edge_type = torch.cat(
-    #     [pad_edge_type_unsqueeze(i, max_node_num) for i in attn_edge_types]
-    # )
+
     spatial_pos = torch.cat(
         [pad_spatial_pos_unsqueeze(i, max_node_num) for i in spatial_poses]
     )
@@ -112,10 +108,9 @@ def collator(items, max_node=128, multi_hop_max_dist=20, spatial_pos_max=1024):
     return dict(
         idx=torch.LongTensor(idxs),
         attn_bias=attn_bias,
-        # attn_edge_type=attn_edge_type,
         spatial_pos=spatial_pos,
         degree=degree,
         x=x,
-        # edge_input=edge_input,
+        edge_input=edge_input,
         y=y,
     )

@@ -25,9 +25,7 @@ class GraphNodeFeature(nn.Module):
     Compute node features for each node in the graph.
     """
 
-    def __init__(
-        self, num_heads, num_atoms, num_degree, hidden_dim, n_layers
-    ):
+    def __init__(self, num_heads, num_atoms, num_degree, hidden_dim, n_layers):
         super(GraphNodeFeature, self).__init__()
         self.num_heads = num_heads
         self.num_atoms = num_atoms
@@ -41,10 +39,7 @@ class GraphNodeFeature(nn.Module):
         self.apply(lambda module: init_params(module, n_layers=n_layers))
 
     def forward(self, batched_data):
-        x, degree = (
-            batched_data["x"],
-            batched_data["degree"]
-        )
+        x, degree = (batched_data["x"], batched_data["degree"])
         n_graph, n_node = x.size()[:2]
 
         # node feauture + graph token
@@ -53,10 +48,7 @@ class GraphNodeFeature(nn.Module):
         # if self.flag and perturb is not None:
         #     node_feature += perturb
 
-        node_feature = (
-            node_feature
-            + self.degree_encoder(degree)
-        )
+        node_feature = node_feature + self.degree_encoder(degree)
 
         graph_token_feature = self.graph_token.weight.unsqueeze(0).repeat(n_graph, 1, 1)
 
@@ -88,9 +80,7 @@ class GraphAttnBias(nn.Module):
 
         self.edge_encoder = nn.Embedding(num_edges + 1, num_heads, padding_idx=0)
         self.edge_type = edge_type
-        self.edge_dis_encoder = nn.Embedding(
-            num_edge_dis * num_heads * num_heads, 1
-        )
+        self.edge_dis_encoder = nn.Embedding(num_edge_dis * num_heads * num_heads, 1)
         self.spatial_pos_encoder = nn.Embedding(num_spatial, num_heads, padding_idx=0)
 
         self.graph_token_virtual_distance = nn.Embedding(1, num_heads)
@@ -98,13 +88,10 @@ class GraphAttnBias(nn.Module):
         self.apply(lambda module: init_params(module, n_layers=n_layers))
 
     def forward(self, batched_data):
-        attn_bias, spatial_pos, x = (
+        attn_bias, spatial_pos, x, edge_input = (
             batched_data["attn_bias"],
             batched_data["spatial_pos"],
             batched_data["x"],
-        )
-        
-        edge_input, = (
             batched_data["edge_input"],
         )
 
@@ -140,9 +127,9 @@ class GraphAttnBias(nn.Module):
         )
         edge_input_flat = torch.bmm(
             edge_input_flat,
-            self.edge_dis_encoder.weight.reshape(
-                -1, self.num_heads, self.num_heads
-            )[:max_dist, :, :],
+            self.edge_dis_encoder.weight.reshape(-1, self.num_heads, self.num_heads)[
+                :max_dist, :, :
+            ],
         )
         edge_input = edge_input_flat.reshape(
             max_dist, n_graph, n_node, n_node, self.num_heads
